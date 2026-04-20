@@ -24,6 +24,8 @@ import re
 parser = argparse.ArgumentParser(description="MS Access Explorer MCP Server")
 parser.add_argument("--db-path", type=str, action='append', dest='db_paths', 
                    help="Path to Access database file (.accdb or .mdb). Use multiple times for multiple databases.")
+parser.add_argument('--db-password', type=str, action='append', dest='db_passwords', 
+                   default=[], help='Password for each database. Must match the order of --db-path arguments.')
 parser.add_argument("--db-name", type=str, action='append', dest='db_names',
                    help="Friendly name for the database. Must match the order of --db-path arguments.")
 parser.add_argument("--db-desc", type=str, action='append', dest='db_descriptions',
@@ -38,6 +40,7 @@ args = parser.parse_args()
 
 # Get the database paths
 db_paths = args.db_paths or []
+db_passwords = args.db_passwords or []
 db_names = args.db_names or []
 db_descriptions = args.db_descriptions or []
 
@@ -158,6 +161,7 @@ async def handle_read_resource(uri: types.AnyUrl) -> str:
         conn_str = (
             r'DRIVER={Microsoft Access Driver (*.mdb, *.accdb)};'
             fr'DBQ={db_path};'
+            + (f'PWD={db_passwords[i]};' if i < len(db_passwords) else '')
         )
         
         # Establish the connection
@@ -379,6 +383,7 @@ async def handle_call_tool(name: str, arguments: dict[str, Any] | None) -> list[
                     conn_str = (
                         r'DRIVER={Microsoft Access Driver (*.mdb, *.accdb)};'
                         fr'DBQ={db_info["path"]};'
+                        + (f'PWD={db_passwords[i]};' if i < len(db_passwords) else '')
                     )
                     conn = pyodbc.connect(conn_str)
                     cursor = conn.cursor()
@@ -409,6 +414,7 @@ async def handle_call_tool(name: str, arguments: dict[str, Any] | None) -> list[
             conn_str = (
                 r'DRIVER={Microsoft Access Driver (*.mdb, *.accdb)};'
                 fr'DBQ={db_path};'
+                + (f'PWD={db_password};' if db_password else '')
             )
             
             # Establish the connection
@@ -667,7 +673,8 @@ async def handle_call_tool(name: str, arguments: dict[str, Any] | None) -> list[
                 conn_str = (
                     r'DRIVER={Microsoft Access Driver (*.mdb, *.accdb)};'
                     fr'DBQ={db_path};'
-                    r'ExtendedAnsiSQL=1;'
+                    + (f'PWD={db_passwords[i]};' if i < len(db_passwords) else '')
+                    + r'ExtendedAnsiSQL=1;'
                 )
                 
                 try:
@@ -723,6 +730,7 @@ async def handle_call_tool(name: str, arguments: dict[str, Any] | None) -> list[
                 conn_str = (
                     r'DRIVER={Microsoft Access Driver (*.mdb, *.accdb)};'
                     fr'DBQ={db_info["path"]};'
+                    + (f'PWD={db_password};' if db_password else '')
                 )
                 conn = pyodbc.connect(conn_str, timeout=10)
                 
@@ -759,6 +767,7 @@ async def handle_call_tool(name: str, arguments: dict[str, Any] | None) -> list[
                     conn_str = (
                         r'DRIVER={Microsoft Access Driver (*.mdb, *.accdb)};'
                         fr'DBQ={databases[default_db_key]["path"]};'
+                        + (f'PWD={db_passwords[i]};' if i < len(db_passwords) else '')
                     )
                     conn = pyodbc.connect(conn_str, timeout=10)
                     cursor = conn.cursor()
